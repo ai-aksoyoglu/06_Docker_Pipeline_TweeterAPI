@@ -1,7 +1,7 @@
 Build a Dockerized Data Pipeline that analyzes the sentiment of tweets.
 
 <div align="center">
-<img src="structure.svg">
+<img src="README_img.svg">
   </div>
 
 In this project, you will build a data pippeline that collect tweets and stores them in a database. Next, the sentiment of tweets is analyzed and the annotated tweets are stored in a second database. Finally, the best or worst sentiment for a given is published on Slack every 10 minutes.
