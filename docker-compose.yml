@@ -1,0 +1,89 @@
+# Central file in a docker-compose pipeline
+# Defines the containers of the pipeline and some environment variables and configuration information
+
+version: "3" # Version of Docker Compose
+
+# Each service is a container
+services:
+  # 1. Container
+  tweet_collector: # Name of the service
+    container_name: tweet_collector
+    build: tweet_collector/ # Build the container using an Docker image definition that is in the directory tweet_collector
+    volumes:
+      - ./tweet_collector/:/app # volumes creates a synchronization between your local directory ./tweet_collector with the container directory
+    # /app
+    depends_on: # depends_on tells docker-compose to start the service mongodb before the current service;
+      - mongodb
+    environment: # In order to set environment variables inside the Docker container
+      - API_KEY=${API_KEY}
+      - API_SECRET=${API_SECRET}
+      - ACCESS_TOKEN=${ACCESS_TOKEN}
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
+    # Step 1: Assign the values for the 4 above mentioned authentication tokens in the current user .bashrc file. 
+    # Example: export API_KEY='your-value'
+    # Step 2: Call these environment variables with os.getenv() inside the config.py file, inside the tweet_collector folder.
+    # Example: API_KEY = os.getenv('API_KEY')
+    # Step 3: When building and running docker-compose, use sudo -E 
+    # sudo -E docker-compose build
+    # sudo -E docker-compose up
+    # because the root does not know the current user .bashrc file.
+
+  # 2. Container
+  mongodb: # Name of the service
+    container_name: mongodb
+    image: mongo # In this case we are telling docker to pull a predefined image from Docker-Hub
+    ports: # Define port of the MongoDB database on_local_machine:inside_of_container
+      - 1420:27017 # on_local_machine:inside_of_container
+
+  # 3. Container
+  etl_job:
+    container_name: etl_job
+    build: etl_job/
+    volumes: 
+      - ./etl_job/:/app
+    depends_on: 
+      - mongodb 
+      - postgresdb
+
+  # 4. Container
+  postgresdb:
+    container_name: postgresdb
+    image: postgres
+    ports:
+      - 5555:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=twitterdb
+
+  # 5. Container
+  slackbot: 
+    container_name: slackbot
+    build: slack_bot/
+    volumes: 
+      - ./slack_bot/:/app
+    depends_on:
+      - postgresdb
+    environment:
+      - webhook_url=${webhook_url}
+  
+  # 6. Container
+  metabase:
+    container_name: metabase
+    image: metabase/metabase
+    ports:
+      - 
+    environment: 
+      -
+    
+  # 7. Container:
+  airflow:
+    container_name: airflow
+    image: puckel/docker-airflow
+    ports:
+      - 8081:8080
+    environment: 
+      - LOAD_EX=y
+    command: ["webserver", "scheduler"]
+    volumes:
+      - ./docker-airflow/dags/:/usr/local/airflow/dags/
